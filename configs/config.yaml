@@ -1,0 +1,53 @@
+# Research Tool 配置文件
+
+searxng:
+  # SearXNG 实例地址（可替换为自建实例）
+  instance: "https://searxng.hqgg.top:59826"
+  # 搜索结果数量
+  result_count: 10
+  # 请求超时（秒）
+  timeout: 10
+
+scraping:
+  # 是否使用 readability-lxml 压缩正文
+  compress: true
+  # 请求超时（秒）
+  timeout: 30
+  # 重试次数
+  retry: 3
+  # User-Agent
+  user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+images:
+  # 是否下载图片
+  download: true
+  # 图片输出目录（相对于项目根目录）
+  output_dir: "output/images"
+  # 单张图片最大大小（MB）
+  max_size_mb: 10
+  # 支持的图片格式
+  formats:
+    - "jpg"
+    - "jpeg"
+    - "png"
+    - "gif"
+    - "webp"
+  # 并发下载数
+  concurrency: 5
+
+output:
+  # 输出格式
+  format: "markdown"
+  # 是否包含 YAML 元数据
+  include_metadata: true
+  # 是否内嵌图片
+  include_images: true
+  # 输出目录
+  search_dir: "output/searches"
+  pages_dir: "output/pages"
+  reports_dir: "output/reports"
+
+logging:
+  level: "INFO"
+  file: "logs/research-tool.log"
+  format: "%(asctime)s - %(levelname)s - %(message)s"
