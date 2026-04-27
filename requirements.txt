@@ -3,7 +3,7 @@ requests>=2.31.0
 PyYAML>=6.0
 
 # Web scraping
-scrapling>=0.6.0
+scrapling>=0.4.0
 readability-lxml>=0.8.1
 lxml>=4.9.0
 
