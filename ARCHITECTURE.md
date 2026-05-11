@@ -95,9 +95,11 @@ GET {searxng_instance}/search?q={query}&format=json
 
 | 优先级 | 方式 | 适用场景 | 失败时 |
 |--------|------|----------|--------|
-| 1 | `scrapling.DefaultFetcher` + `extract.get` | 普通网页 | 降至 2 |
-| 2 | `scrapling.StealthyFetcher` + `fetch` | 反爬站点 | 降至 3 |
+| 1 | `scrapling.Fetcher().get()` | 普通网页 | 降至 2 |
+| 2 | `scrapling:stealthy`（当前 CLI 运行时跳过） | 反爬站点 | 降至 3 |
 | 3 | `requests.Session`（降级保底） | 任意网站 | 返回原始 HTML |
+
+> 当前 CLI 运行时会跳过 `scrapling:stealthy` 分支，并在降级时输出 warning 后继续走 `requests:fallback`
 
 **接口**：
 ```python
@@ -240,11 +242,11 @@ class Documentor:
     ▼
 SmartScraper.fetch_smart(url)
     │
-    ├─→ scrapling.extract.get
+    ├─→ scrapling.Fetcher().get()
     │      成功 → readability 压缩 → 返回
     │
-    ├─→ scrapling.stealthy-fetch（回退）
-    │      成功 → readability 压缩 → 返回
+    ├─→ scrapling:stealthy（当前 CLI 运行时跳过）
+    │      跳过 → 记录 warning → 降至 requests
     │
     └─→ requests（降级）
            成功 → readability 压缩 → 返回

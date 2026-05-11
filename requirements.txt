@@ -3,9 +3,10 @@ requests>=2.31.0
 PyYAML>=6.0
 
 # Web scraping
-scrapling>=0.4.0
+scrapling[all]>=0.4.2
 readability-lxml>=0.8.1
 lxml>=4.9.0
+beautifulsoup4>=4.12.0
 
 # Async
 aiohttp>=3.9.0

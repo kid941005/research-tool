@@ -123,7 +123,15 @@ class Documentor:
             "topic": topic,
             "timestamp": datetime.now().isoformat(),
             "result_count": len(results),
-            "results": results
+            "results": [
+                {
+                    **item,
+                    "source_type": item.get("source_type") or (
+                        "wechat" if "mp.weixin.qq.com" in item.get("url", "") else "web"
+                    )
+                }
+                for item in results
+            ]
         }
 
         with open(filepath, "w", encoding="utf-8") as f:
@@ -202,7 +210,10 @@ class Documentor:
         self,
         topic: str,
         pages: List[Dict],
-        summary: Optional[str] = None
+        summary: Optional[str] = None,
+        analysis: Optional[Dict] = None,
+        filename: Optional[str] = None,
+        stats: Optional[Dict] = None
     ) -> str:
         """
         生成调研报告
@@ -216,8 +227,11 @@ class Documentor:
             报告文件路径
         """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"report_{self._sanitize_filename(topic, 40)}_{timestamp}.md"
-        filepath = self.reports_dir / filename
+        default_filename = f"report_{self._sanitize_filename(topic, 40)}_{timestamp}.md"
+        final_filename = filename or default_filename
+        if not final_filename.endswith(".md"):
+            final_filename = f"{final_filename}.md"
+        filepath = self.reports_dir / final_filename
 
         parts = []
 
@@ -240,17 +254,96 @@ class Documentor:
         parts.append("")
 
         # 摘要
-        if summary:
+        final_summary = summary or (analysis or {}).get("summary")
+        if final_summary:
             parts.append("## 摘要")
             parts.append("")
-            parts.append(summary)
+            parts.append(final_summary)
             parts.append("")
+
+        if analysis:
+            if stats:
+                parts.append("## 抓取统计")
+                parts.append("")
+                parts.append(f"- 尝试抓取：{stats.get('attempted_count', 0)}")
+                parts.append(f"- 成功抓取：{stats.get('success_count', 0)}")
+                parts.append(f"- 失败抓取：{stats.get('failed_count', 0)}")
+                parts.append("")
+
+            if analysis.get("key_takeaways"):
+                parts.append("## 执行摘要")
+                parts.append("")
+                for takeaway in analysis["key_takeaways"]:
+                    parts.append(f"- {takeaway}")
+                parts.append("")
+
+            if analysis.get("top_keywords"):
+                parts.append("## 高频关键词")
+                parts.append("")
+                parts.append("- " + "\n- ".join(analysis["top_keywords"]))
+                parts.append("")
+
+            if analysis.get("source_assessment"):
+                parts.append("## 来源评估")
+                parts.append("")
+                for item in analysis["source_assessment"]:
+                    source_label = "微信公众号" if item.get("source_type") == "wechat" else "网页"
+                    parts.append(f"- {item['domain']}: {item['count']} 篇，平均正文长度 {item['avg_length']} 字（{source_label}）")
+                    if item.get("sample_titles"):
+                        parts.append(f"  - 样例：{'；'.join(item['sample_titles'])}")
+                parts.append("")
+
+            if analysis.get("source_type_summary"):
+                parts.append("## 来源类型")
+                parts.append("")
+                for source_type, count in analysis["source_type_summary"].items():
+                    label = "微信公众号" if source_type == "wechat" else "网页"
+                    parts.append(f"- {label}: {count}")
+                parts.append("")
+
+            if analysis.get("wechat_sources"):
+                parts.append("## 微信公众号来源")
+                parts.append("")
+                for idx, item in enumerate(analysis["wechat_sources"], 1):
+                    parts.append(f"{idx}. [{item['title']}]({item['url']})")
+                parts.append("")
+
+            if analysis.get("source_domains"):
+                parts.append("## 来源分布")
+                parts.append("")
+                for domain, count in analysis["source_domains"]:
+                    parts.append(f"- {domain}: {count}")
+                parts.append("")
+
+            if analysis.get("recurring_themes"):
+                parts.append("## 核心发现")
+                parts.append("")
+                for idx, theme in enumerate(analysis["recurring_themes"], 1):
+                    parts.append(f"### {idx}. {theme['keyword']}")
+                    parts.append("")
+                    parts.append(f"- 涉及来源数：{theme.get('source_count', 0)}")
+                    for evidence in theme.get("evidence", [])[:3]:
+                        parts.append(f"- {evidence['text']}")
+                        if evidence.get("url"):
+                            parts.append(f"  - 来源：[{evidence.get('title', 'Untitled')}]({evidence['url']})")
+                    parts.append("")
+
+            if analysis.get("recommendations"):
+                parts.append("## 建议下一步")
+                parts.append("")
+                for item in analysis["recommendations"]:
+                    parts.append(f"- {item}")
+                parts.append("")
 
         # 来源列表
         parts.append("## 信息来源")
         parts.append("")
         for i, page in enumerate(pages, 1):
             parts.append(f"{i}. [{page.get('title', 'Untitled')}]({page.get('url', '')}) - {page.get('url', '')}")
+            if page.get("fetch_method"):
+                parts.append(f"   - 抓取方式：{page.get('fetch_method')}")
+            if page.get("warning"):
+                parts.append(f"   - 警告：{page.get('warning')}")
         parts.append("")
 
         # 各页面摘要
@@ -261,6 +354,10 @@ class Documentor:
             parts.append(f"### {i}. {page.get('title', 'Untitled')}")
             parts.append("")
             parts.append(f"来源：{page.get('url', '')}")
+            if page.get("fetch_method"):
+                parts.append(f"抓取方式：{page.get('fetch_method')}")
+            if page.get("warning"):
+                parts.append(f"警告：{page.get('warning')}")
             parts.append("")
             if page.get("content"):
                 # 截取前500字作为摘要

@@ -54,12 +54,19 @@ class SearXNGSearcher:
             data = response.json()
 
             results = []
-            for item in data.get("results", [])[:limit]:
+            seen_urls = set()
+            for item in data.get("results", []):
+                url = item.get("url", "").strip()
+                if not url or url in seen_urls:
+                    continue
+                seen_urls.add(url)
                 results.append({
                     "title": item.get("title", ""),
-                    "url": item.get("url", ""),
+                    "url": url,
                     "snippet": item.get("content", item.get("description", "")),
                 })
+                if len(results) >= limit:
+                    break
 
             logger.info(f"Found {len(results)} results for: {query}")
             return results
