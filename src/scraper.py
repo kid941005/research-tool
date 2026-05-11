@@ -84,6 +84,11 @@ class SmartScraper:
                 return wechat_content, wechat_title
             logger.warning("WeChat specialized extraction returned empty result; falling back to generic compression")
 
+        generic_invalid = self._detect_generic_invalid_page(raw_html, url)
+        if generic_invalid:
+            logger.warning(generic_invalid)
+            return "", generic_invalid
+
         if not self.compress or not ReadabilityDocument:
             return raw_html, ""
 
@@ -164,6 +169,28 @@ class SmartScraper:
             ("参数错误", "wechat error page: 参数错误"),
             ("weui-msg", "wechat error page: weui-msg"),
         ]
+        for marker, message in checks:
+            if marker in raw_html:
+                return message
+        return ""
+
+    def _detect_generic_invalid_page(self, raw_html: str, url: str = "") -> str:
+        checks = [
+            ("百度安全验证", "invalid page: 百度安全验证"),
+            ("安全验证", "invalid page: 安全验证"),
+            ("亲爱的用户", "invalid page: 站点公告页"),
+            ("产品策略变动", "invalid page: 站点公告页"),
+            ("查看公告", "invalid page: 站点公告页"),
+            ("欢迎来到知乎", "invalid page: 知乎欢迎页"),
+            ("知乎，让每一次点击都充满意义", "invalid page: 知乎欢迎页"),
+            ("发现问题背后的世界", "invalid page: 知乎欢迎页"),
+            ("%PDF-", "invalid page: raw pdf content"),
+            ("endobj", "invalid page: raw pdf content"),
+            ("endstream", "invalid page: raw pdf content"),
+        ]
+        normalized_url = (url or "").lower()
+        if normalized_url.endswith(".pdf"):
+            return "invalid page: raw pdf content"
         for marker, message in checks:
             if marker in raw_html:
                 return message
@@ -365,15 +392,19 @@ class SmartScraper:
         content = self._fetch_with_requests(url)
         if content:
             result["content"], result["title"] = self._compress_content(content, url)
-            result["images"] = self._extract_images(content)
-            result["method"] = "requests:fallback"
-            if self._is_wechat_url(url):
-                wechat_error = self._detect_wechat_error(content)
-                if wechat_error:
-                    result["warning"] = f"{result['warning']}; {wechat_error}" if result["warning"] else wechat_error
-                    result["error"] = wechat_error
-            result["success"] = True
-            return result
+            if not result["content"] and result["title"].startswith("invalid page:"):
+                result["warning"] = result["title"]
+                result["error"] = result["title"]
+            else:
+                result["images"] = self._extract_images(content) if not self.compress else []
+                result["method"] = "requests:fallback"
+                if self._is_wechat_url(url):
+                    wechat_error = self._detect_wechat_error(content)
+                    if wechat_error:
+                        result["warning"] = f"{result['warning']}; {wechat_error}" if result["warning"] else wechat_error
+                        result["error"] = wechat_error
+                result["success"] = True
+                return result
 
         result["error"] = result["warning"] or "all fetch methods failed"
         if not scrapling and not result["warning"]:

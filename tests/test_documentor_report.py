@@ -6,6 +6,30 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.documentor import Documentor
+from src.analyzer import ResearchAnalyzer
+
+
+def test_analyzer_limits_keyword_extraction_to_leading_content():
+    analyzer = ResearchAnalyzer()
+    lead = "压电陶瓷是一种能够将机械能和电能互相转换的功能陶瓷材料。它在受力时产生电压，在加电压时发生形变。"
+    long_tail = " ".join(["第一次世界大战 美国 BaTiO3 mnpq"] * 200)
+    analysis = analyzer.analyze(
+        "压电陶瓷是什么",
+        [
+            {
+                "title": "压电陶瓷说明",
+                "url": "https://example.com/piezo",
+                "content": lead + ("甲" * 1400) + long_tail,
+                "source_type": "web",
+            }
+        ],
+    )
+
+    keywords = analysis["top_keywords"]
+    assert "第一次世界大战" not in keywords
+    assert "美国" not in keywords
+    assert "batio" not in keywords
+    assert "mnpq" not in keywords
 
 
 def test_save_report_includes_stats_and_fetch_warning(tmp_path):

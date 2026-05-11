@@ -291,6 +291,12 @@ async def cmd_batch(args, config: dict):
 
             if result["success"]:
                 success_count += 1
+                if result.get("title", "").startswith("invalid page:") or not result.get("content", "").strip():
+                    failed_count += 1
+                    success_count -= 1
+                    reason = result.get("error") or result.get("warning") or result.get("title") or "invalid page"
+                    print(f"    跳过: {reason}")
+                    continue
                 # 下载图片
                 images_downloaded = {}
                 if config["images"]["download"] and result["images"]:
@@ -416,6 +422,12 @@ async def cmd_research(args, config: dict):
 
         if result["success"]:
             success_count += 1
+            if result.get("title", "").startswith("invalid page:") or not result.get("content", "").strip():
+                failed_count += 1
+                success_count -= 1
+                reason = result.get("error") or result.get("warning") or result.get("title") or "invalid page"
+                print(f"    ✗ 跳过: {reason}")
+                continue
             # 下载图片
             images_downloaded = {}
             if config["images"]["download"] and result["images"]:

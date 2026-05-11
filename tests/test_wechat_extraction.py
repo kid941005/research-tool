@@ -67,6 +67,53 @@ def test_wechat_real_sample_trims_known_tail_markers():
     assert "阅读更多" not in content
 
 
+def test_wechat_real_sample_trims_known_tail_markers():
+    scraper = SmartScraper()
+    html = """
+    <html>
+      <head><title>GPT-Image2爆火后，最先出圈的竟然是看手相</title></head>
+      <body>
+        <div id="js_content">
+          <p>第一段正文。</p>
+          <p>第二段正文。</p>
+          <p>关于AI信息可视化设计的相关话题，欢迎交流~~</p>
+          <p>想要加入AI信息图设计交流社群，感兴趣的宝们可加微。</p>
+          <p>阅读更多</p>
+        </div>
+      </body>
+    </html>
+    """
+
+    content, title = scraper._compress_wechat(html)
+
+    assert title == "GPT-Image2爆火后，最先出圈的竟然是看手相"
+    assert "第一段正文。" in content
+    assert "第二段正文。" in content
+    assert "欢迎交流" not in content
+    assert "可加微" not in content
+    assert "阅读更多" not in content
+
+
+def test_generic_invalid_pages_are_detected():
+    scraper = SmartScraper()
+
+    content, title = scraper._compress_content("<html><title>百度安全验证</title><body>百度安全验证</body></html>", "https://baike.baidu.com/item/test")
+    assert content == ""
+    assert title == "invalid page: 百度安全验证"
+
+    content, title = scraper._compress_content("<html><body>亲爱的用户：由于产品策略变动，请查看公告</body></html>", "https://wenda.so.com/q/test")
+    assert content == ""
+    assert title == "invalid page: 站点公告页"
+
+    content, title = scraper._compress_content("<html><body>知乎，让每一次点击都充满意义 —— 欢迎来到知乎，发现问题背后的世界。</body></html>", "https://zhuanlan.zhihu.com/p/test")
+    assert content == ""
+    assert title == "invalid page: 知乎欢迎页"
+
+    content, title = scraper._compress_content("%PDF-1.7\n1 0 obj\nendobj\nstream", "http://example.com/a.pdf")
+    assert content == ""
+    assert title == "invalid page: raw pdf content"
+
+
 def test_generic_readability_summary_is_converted_to_plain_text():
     scraper = SmartScraper()
     html = """

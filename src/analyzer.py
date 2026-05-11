@@ -21,7 +21,8 @@ class ResearchAnalyzer:
         "being", "could", "should", "would", "there", "here", "your", "you", "ours", "ourselves",
         "research", "report", "analysis", "content", "source", "result", "page", "pages", "data", "information",
         "研究", "报告", "分析", "相关", "以及", "通过", "可以", "进行", "一个", "我们", "他们", "这些", "那些",
-        "如果", "因为", "所以", "需要", "使用", "当前", "其中", "内容", "页面", "数据", "信息", "来源", "结果"
+        "如果", "因为", "所以", "需要", "使用", "当前", "其中", "内容", "页面", "数据", "信息", "来源", "结果",
+        "美国", "batio"
     }
 
     SENTENCE_SPLIT_RE = re.compile(r"(?<=[。！？.!?])\s+|\n+")
@@ -42,7 +43,8 @@ class ResearchAnalyzer:
             url = page.get("url") or ""
             domain = urlparse(url).netloc
             content = self._normalize_text(page.get("content", ""))
-            sentences = self._sentences(content)
+            analysis_content = content[:1200]
+            sentences = self._sentences(analysis_content)
             top_sentence = self._pick_representative_sentence(sentences)
             if top_sentence:
                 findings.append({
@@ -59,7 +61,7 @@ class ResearchAnalyzer:
                 "sentence_count": len(sentences),
                 "content_length": len(content),
             })
-            keyword_counter.update(self._extract_keywords(title + "\n" + content))
+            keyword_counter.update(self._extract_keywords(title + "\n" + analysis_content))
 
         top_keywords = [word for word, _ in keyword_counter.most_common(8)]
         recurring_themes = self._group_themes(findings)
